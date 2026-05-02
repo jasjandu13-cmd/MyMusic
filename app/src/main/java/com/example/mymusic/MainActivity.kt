@@ -26,11 +26,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,7 +45,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -74,29 +71,29 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.example.mymusic.components.AlbumRow
+import com.example.mymusic.components.ArtistRow
+import com.example.mymusic.components.MiniPlayerBar
+import com.example.mymusic.components.SongRow
+import com.example.mymusic.dialogs.BoostDialog
+import com.example.mymusic.dialogs.EqualizerDialog
+import com.example.mymusic.dialogs.NowPlayingDialog
+import com.example.mymusic.dialogs.QueueDialog
+import com.example.mymusic.dialogs.ReplayGainDialog
+import com.example.mymusic.dialogs.SleepTimerDialog
+import com.example.mymusic.utils.albumKey
+import com.example.mymusic.utils.formatDuration
+import com.example.mymusic.utils.gainToLinear
+import com.example.mymusic.utils.toMediaItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-import com.example.mymusic.components.MiniPlayerBar
-import com.example.mymusic.utils.toMediaItem
-import com.example.mymusic.utils.albumKey
-import com.example.mymusic.utils.formatDuration
-import com.example.mymusic.utils.formatSleepTime
-import com.example.mymusic.utils.formatTime
-import com.example.mymusic.utils.gainToLinear
-import com.example.mymusic.dialogs.EqualizerDialog
-import com.example.mymusic.dialogs.BoostDialog
-import com.example.mymusic.dialogs.SleepTimerDialog
-import com.example.mymusic.dialogs.ReplayGainDialog
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -542,7 +539,7 @@ fun MusicPlayerApp() {
                     eqLevels[i] = 0f
                 }
             },
-            onDismiss = { }
+            onDismiss = { showEqualizerDialog = false }
         )
     }
 
@@ -564,7 +561,7 @@ fun MusicPlayerApp() {
                 player.volume = 1.0f
                 loudnessManager.setTargetGain(0)
             },
-            onDismiss = { }
+            onDismiss = { showBoostDialog = false }
         )
     }
 
@@ -579,7 +576,7 @@ fun MusicPlayerApp() {
                 sleepTimerActive = false
                 sleepTimerRemainingMs = 0L
             },
-            onDismiss = { }
+            onDismiss = {  }
         )
     }
 
@@ -597,446 +594,112 @@ fun MusicPlayerApp() {
                     applyReplayGainForCurrentSong()
                 }
             },
-            onDismiss = { }
+            onDismiss = { showReplayGainDialog = false }
         )
     }
 
     if (showNowPlaying && currentSong != null) {
-        Dialog(
-            onDismissRequest = { },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding()
-                        .padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { }) {
-                            Text("Close")
-                        }
-
-                        Text(
-                            text = "Now Playing",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Spacer(modifier = Modifier.size(64.dp))
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    if (currentArtwork != null) {
-                        Image(
-                            bitmap = currentArtwork!!.asImageBitmap(),
-                            contentDescription = "Album art",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(24.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(0.42f)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "♪",
-                                style = MaterialTheme.typography.displayLarge
-                            )
-                        }
-                    }
-
-                    if (sleepTimerActive) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Sleep in ${formatSleepTime(sleepTimerRemainingMs)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TextButton(
-                            onClick = {
-                                sleepTimerActive = false
-                                sleepTimerRemainingMs = 0L
-                            }
-                        ) {
-                            Text("Cancel Sleep Timer")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Text(
-                        text = currentSong.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = currentSong.artist,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = {
-                            toggleFavorite(currentSong.id)
-                        }
-                    ) {
-                        Text(
-                            if (favoriteSongIds.contains(currentSong.id)) {
-                                "Remove from Favorites"
-                            } else {
-                                "Add to Favorites"
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Slider(
-                        value = if (duration > 0) {
-                            if (isSeeking) seekPosition else currentPosition.toFloat()
-                        } else {
-                            0f
-                        },
-                        onValueChange = { newValue ->
-                            isSeeking = true
-                            seekPosition = newValue
-                        },
-                        onValueChangeFinished = {
-                            player.seekTo(seekPosition.toLong())
-                            currentPosition = seekPosition.toLong()
-                            isSeeking = false
-                        },
-                        valueRange = 0f..(if (duration > 0) duration.toFloat() else 1f)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(formatTime(currentPosition))
-                        Text(formatTime(duration))
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                shuffleEnabled = !shuffleEnabled
-                                player.shuffleModeEnabled = shuffleEnabled
-                            }
-                        ) {
-                            Text(if (shuffleEnabled) "Shuffle On" else "Shuffle Off")
-                        }
-
-                        Button(
-                            onClick = { cycleRepeatMode() }
-                        ) {
-                            Text(repeatLabel())
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                if (player.hasPreviousMediaItem()) {
-                                    player.seekToPreviousMediaItem()
-                                    player.play()
-                                    setupAudioEffects()
-                                    applyReplayGainForCurrentSong()
-                                }
-                            }
-                        ) {
-                            Text("Prev")
-                        }
-
-                        Button(
-                            onClick = {
-                                if (player.isPlaying) {
-                                    player.pause()
-                                } else {
-                                    if (player.mediaItemCount > 0) {
-                                        if (player.currentMediaItemIndex == -1) {
-                                            player.seekToDefaultPosition(0)
-                                        }
-                                        player.play()
-                                        setupAudioEffects()
-                                        applyReplayGainForCurrentSong()
-                                    }
-                                }
-                            }
-                        ) {
-                            Text(if (isPlaying) "Pause" else "Play")
-                        }
-
-                        Button(
-                            onClick = {
-                                if (player.hasNextMediaItem()) {
-                                    player.seekToNextMediaItem()
-                                    player.play()
-                                    setupAudioEffects()
-                                    applyReplayGainForCurrentSong()
-                                }
-                            }
-                        ) {
-                            Text("Next")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                showQueueDialog = true
-                                queueVersion++
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Queue")
-                        }
-
-                        Button(
-                            onClick = {
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Sleep")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                setupAudioEffects()
-                            }
-                        ) {
-                            Text("EQ")
-                        }
-
-                        Button(
-                            onClick = {
-                                setupAudioEffects()
-                            }
-                        ) {
-                            Text("Boost")
-                        }
-
-                        Button(
-                            onClick = {
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("RG")
-                        }
-                    }
+        NowPlayingDialog(
+            song = currentSong,
+            artwork = currentArtwork,
+            isFavorite = favoriteSongIds.contains(currentSong.id),
+            shuffleEnabled = shuffleEnabled,
+            repeatLabel = repeatLabel(),
+            currentPosition = currentPosition,
+            duration = duration,
+            isSeeking = isSeeking,
+            seekPosition = seekPosition,
+            sleepTimerActive = sleepTimerActive,
+            sleepTimerRemainingMs = sleepTimerRemainingMs,
+            onClose = { showNowPlaying = false },
+            onToggleFavorite = { toggleFavorite(currentSong.id) },
+            onCancelSleepTimer = {
+                sleepTimerActive = false
+                sleepTimerRemainingMs = 0L
+            },
+            onSeekChange = { newValue ->
+                isSeeking = true
+                seekPosition = newValue
+            },
+            onSeekFinished = {
+                player.seekTo(seekPosition.toLong())
+                currentPosition = seekPosition.toLong()
+                isSeeking = false
+            },
+            onToggleShuffle = {
+                shuffleEnabled = !shuffleEnabled
+                player.shuffleModeEnabled = shuffleEnabled
+            },
+            onCycleRepeat = { cycleRepeatMode() },
+            onPrev = {
+                if (player.hasPreviousMediaItem()) {
+                    player.seekToPreviousMediaItem()
+                    player.play()
+                    setupAudioEffects()
+                    applyReplayGainForCurrentSong()
                 }
-            }
-        }
+            },
+            onPlayPause = {
+                if (player.isPlaying) player.pause() else player.play()
+            },
+            onNext = {
+                if (player.hasNextMediaItem()) {
+                    player.seekToNextMediaItem()
+                    player.play()
+                    setupAudioEffects()
+                    applyReplayGainForCurrentSong()
+                }
+            },
+            onOpenQueue = {
+                showQueueDialog = true
+                queueVersion++
+            },
+            onOpenSleep = { showSleepTimerDialog = true },
+            onOpenEqualizer = {
+                setupAudioEffects()
+                showEqualizerDialog = true
+            },
+            onOpenBoost = {
+                setupAudioEffects()
+                showBoostDialog = true
+            },
+            onOpenReplayGain = { showReplayGainDialog = true }
+        )
     }
 
     if (showQueueDialog) {
-        Dialog(
-            onDismissRequest = { },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding()
-                        .padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { }) {
-                            Text("Close")
-                        }
-
-                        Text(
-                            text = "Up Next",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Spacer(modifier = Modifier.size(64.dp))
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Current queue: ${player.mediaItemCount} tracks",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (player.mediaItemCount == 0) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Queue is empty.")
-                        }
-                    } else {
-                        LazyColumn {
-                            items(player.mediaItemCount) { index ->
-                                queueVersion
-
-                                val item = player.getMediaItemAt(index)
-                                val title = item.mediaMetadata.title?.toString() ?: "Unknown title"
-                                val artist = item.mediaMetadata.artist?.toString() ?: "Unknown artist"
-                                val isCurrent = index == player.currentMediaItemIndex
-
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 6.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp)
-                                    ) {
-                                        Text(
-                                            text = if (isCurrent) "Now Playing" else "Up Next",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (isCurrent) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            }
-                                        )
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        Text(
-                                            text = title,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-
-                                        Spacer(modifier = Modifier.height(2.dp))
-
-                                        Text(
-                                            text = artist,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-
-                                        Spacer(modifier = Modifier.height(10.dp))
-
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Button(
-                                                onClick = {
-                                                    player.seekToDefaultPosition(index)
-                                                    player.play()
-                                                    setupAudioEffects()
-                                                    applyReplayGainForCurrentSong()
-                                                    updateCurrentArtwork()
-                                                    queueVersion++
-                                                },
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text("Play")
-                                            }
-
-                                            Button(
-                                                onClick = {
-                                                    if (index > 0) {
-                                                        player.moveMediaItem(index, index - 1)
-                                                        queueVersion++
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text("Up")
-                                            }
-
-                                            Button(
-                                                onClick = {
-                                                    if (index < player.mediaItemCount - 1) {
-                                                        player.moveMediaItem(index, index + 1)
-                                                        queueVersion++
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text("Down")
-                                            }
-
-                                            Button(
-                                                onClick = {
-                                                    if (player.mediaItemCount > 1) {
-                                                        player.removeMediaItem(index)
-                                                        queueVersion++
-                                                        updateCurrentArtwork()
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text("Remove")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        QueueDialog(
+            player = player,
+            queueVersion = queueVersion,
+            onClose = { showQueueDialog = false },
+            onPlayAt = { index ->
+                player.seekToDefaultPosition(index)
+                player.play()
+                setupAudioEffects()
+                applyReplayGainForCurrentSong()
+                updateCurrentArtwork()
+                queueVersion++
+            },
+            onMoveUp = { index ->
+                if (index > 0) {
+                    player.moveMediaItem(index, index - 1)
+                    queueVersion++
+                }
+            },
+            onMoveDown = { index ->
+                if (index < player.mediaItemCount - 1) {
+                    player.moveMediaItem(index, index + 1)
+                    queueVersion++
+                }
+            },
+            onRemoveAt = { index ->
+                if (player.mediaItemCount > 1) {
+                    player.removeMediaItem(index)
+                    queueVersion++
+                    updateCurrentArtwork()
                 }
             }
-        }
+        )
     }
 
     Scaffold(
@@ -1138,89 +801,31 @@ fun MusicPlayerApp() {
                                     items = songs,
                                     key = { _, song -> song.id }
                                 ) { index, song ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                player.shuffleModeEnabled = shuffleEnabled
-                                                player.repeatMode = repeatMode
-                                                player.seekToDefaultPosition(index)
-                                                player.play()
-                                                setupAudioEffects()
-                                                applyReplayGainForCurrentSong()
-                                                currentArtwork = ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
-                                            }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        val songArt = remember(song.id) {
-                                            ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
-                                        }
-
-                                        if (songArt != null) {
-                                            Image(
-                                                bitmap = songArt.asImageBitmap(),
-                                                contentDescription = "Album art",
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(10.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("♪")
-                                            }
-                                        }
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = song.title,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "${song.artist} • ${formatDuration(song.duration)}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-
-                                        Column(
-                                            horizontalAlignment = Alignment.End
-                                        ) {
-                                            Text(
-                                                text = if (favoriteSongIds.contains(song.id)) "♥" else "♡",
-                                                color = if (favoriteSongIds.contains(song.id)) {
-                                                    MaterialTheme.colorScheme.primary
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                                },
-                                                modifier = Modifier.clickable {
-                                                    toggleFavorite(song.id)
-                                                }
-                                            )
-
-                                            Spacer(modifier = Modifier.height(8.dp))
-
-                                            Text(
-                                                text = "Add to playlist",
-                                                color = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.clickable {
-                                                    songToAdd = song
-                                                }
-                                            )
-                                        }
+                                    val songArt = remember(song.id) {
+                                        ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
                                     }
-                                    HorizontalDivider()
+
+                                    SongRow(
+                                        song = song,
+                                        artwork = songArt,
+                                        isFavorite = favoriteSongIds.contains(song.id),
+                                        onClick = {
+                                            player.shuffleModeEnabled = shuffleEnabled
+                                            player.repeatMode = repeatMode
+                                            player.seekToDefaultPosition(index)
+                                            player.play()
+                                            setupAudioEffects()
+                                            applyReplayGainForCurrentSong()
+                                            currentArtwork = ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
+                                        },
+                                        onToggleFavorite = {
+                                            toggleFavorite(song.id)
+                                        },
+                                        onAddToPlaylist = {
+                                            songToAdd = song
+                                            showAddToPlaylistDialog = true
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -1247,68 +852,28 @@ fun MusicPlayerApp() {
                                         }
                                     }
 
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                if (albumSongs.isNotEmpty()) {
-                                                    player.setMediaItems(albumSongs.map { it.toMediaItem(context) })
-                                                    player.prepare()
-                                                    player.shuffleModeEnabled = shuffleEnabled
-                                                    player.repeatMode = repeatMode
-                                                    player.seekToDefaultPosition(0)
-                                                    player.play()
-                                                    setupAudioEffects()
-                                                    applyReplayGainForCurrentSong()
+                                    AlbumRow(
+                                        albumName = albumName,
+                                        songs = albumSongs,
+                                        artwork = albumArt,
+                                        onClick = {
+                                            if (albumSongs.isNotEmpty()) {
+                                                player.setMediaItems(albumSongs.map { it.toMediaItem(context) })
+                                                player.prepare()
+                                                player.shuffleModeEnabled = shuffleEnabled
+                                                player.repeatMode = repeatMode
+                                                player.seekToDefaultPosition(0)
+                                                player.play()
+                                                setupAudioEffects()
+                                                applyReplayGainForCurrentSong()
 
-                                                    songs.indexOfFirst { it.id == albumSongs[0].id }
-                                                    currentArtwork = firstSong?.let {
-                                                        ArtworkRepository.loadEmbeddedArtwork(context, it.contentUri)
-                                                    }
+                                                songs.indexOfFirst { it.id == albumSongs[0].id }
+                                                currentArtwork = firstSong?.let {
+                                                    ArtworkRepository.loadEmbeddedArtwork(context, it.contentUri)
                                                 }
                                             }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        if (albumArt != null) {
-                                            Image(
-                                                bitmap = albumArt.asImageBitmap(),
-                                                contentDescription = "Album art",
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(10.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("♪")
-                                            }
                                         }
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = albumName,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "${firstSong?.artist ?: "Unknown Artist"} • ${albumSongs.size} songs",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-
-                                    HorizontalDivider()
+                                    )
                                 }
                             }
                         }
@@ -1343,75 +908,32 @@ fun MusicPlayerApp() {
                                         .distinct()
                                         .size
 
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                if (artistSongs.isNotEmpty()) {
-                                                    player.setMediaItems(artistSongs.map {
-                                                        it.toMediaItem(
-                                                            context
-                                                        )
-                                                    })
-                                                    player.prepare()
-                                                    player.shuffleModeEnabled = shuffleEnabled
-                                                    player.repeatMode = repeatMode
-                                                    player.seekToDefaultPosition(0)
-                                                    player.play()
-                                                    setupAudioEffects()
-                                                    applyReplayGainForCurrentSong()
+                                    ArtistRow(
+                                        artistName = artistName,
+                                        songs = artistSongs,
+                                        albumCount = albumCount,
+                                        artwork = artistArt,
+                                        onClick = {
+                                            if (artistSongs.isNotEmpty()) {
+                                                player.setMediaItems(artistSongs.map { it.toMediaItem(context) })
+                                                player.prepare()
+                                                player.shuffleModeEnabled = shuffleEnabled
+                                                player.repeatMode = repeatMode
+                                                player.seekToDefaultPosition(0)
+                                                player.play()
+                                                setupAudioEffects()
+                                                applyReplayGainForCurrentSong()
 
-                                                    songs.indexOfFirst { it.id == artistSongs[0].id }
-                                                    currentArtwork = firstSong?.let {
-                                                        ArtworkRepository.loadEmbeddedArtwork(
-                                                            context,
-                                                            it.contentUri
-                                                        )
-                                                    }
+                                                songs.indexOfFirst { it.id == artistSongs[0].id }
+                                                currentArtwork = firstSong?.let {
+                                                    ArtworkRepository.loadEmbeddedArtwork(
+                                                        context,
+                                                        it.contentUri
+                                                    )
                                                 }
                                             }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        if (artistArt != null) {
-                                            Image(
-                                                bitmap = artistArt.asImageBitmap(),
-                                                contentDescription = "Artist art",
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(10.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(52.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("♪")
-                                            }
                                         }
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = artistName,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "${artistSongs.size} songs • $albumCount albums",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-
-                                    HorizontalDivider()
+                                    )
                                 }
                             }
                         }
