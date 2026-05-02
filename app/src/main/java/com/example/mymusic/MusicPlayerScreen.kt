@@ -96,6 +96,12 @@ import com.example.mymusic.utils.toMediaItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -764,6 +770,94 @@ fun MusicPlayerScreen() {
 
 
                 if (openedPlaylistId == -1L) {
+
+                    // HEADER: search row
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Left filter icon (does nothing yet)
+                            IconButton(onClick = { /* TODO: open filters later */ }) {
+                                Icon(
+                                    imageVector = Icons.Filled.FilterList,
+                                    contentDescription = "Filters"
+                                )
+                            }
+
+                            // Center fake search bar – tap to go to Search tab
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { selectedTab = 6 },
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Search,
+                                        contentDescription = "Search"
+                                    )
+                                    Text(
+                                        text = "Search songs, playlists, and artists",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            // Right mic icon (placeholder)
+                            IconButton(onClick = { /* TODO: voice search */ }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Mic,
+                                    contentDescription = "Voice search"
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // FEATURE CARDS: Favourites / Playlists / Recent
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            FeatureCard(
+                                label = "Favourites",
+                                modifier = Modifier.weight(1f),
+                                onClick = { selectedTab = 7 }
+                            )
+                            FeatureCard(
+                                label = "Playlists",
+                                modifier = Modifier.weight(1f),
+                                onClick = { selectedTab = 5 }
+                            )
+                            FeatureCard(
+                                label = "Recent",
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    // TODO: implement recent – for now just stay on Songs
+                                    selectedTab = 0
+                                }
+                            )
+                        }
+                    }
+
+                    // TABS under the header (keep your existing tabs)
                     ScrollableTabRow(selectedTabIndex = selectedTab) {
                         Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Songs") })
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Albums") })
@@ -776,6 +870,7 @@ fun MusicPlayerScreen() {
                     }
 
                     if (selectedTab == 0) {
+                        // (leave everything from here onwards exactly as you already have it)
                         if (songs.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -1129,7 +1224,6 @@ fun MusicPlayerScreen() {
                                                         openedPlaylistName = playlist.name
 
                                                         val mediaItems = playlistSongs.map { it.toMediaItem(context) }
-
                                                         player.setMediaItems(mediaItems)
                                                         player.prepare()
                                                         player.shuffleModeEnabled = shuffleEnabled
@@ -1453,6 +1547,32 @@ fun MusicPlayerScreen() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FeatureCard(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(72.dp),
+        shape = RoundedCornerShape(20.dp),
+        onClick = onClick
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }
