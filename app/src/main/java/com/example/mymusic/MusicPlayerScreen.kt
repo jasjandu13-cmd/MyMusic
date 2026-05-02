@@ -97,7 +97,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
+@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MusicPlayerScreen() {
     val context = LocalContext.current
@@ -423,6 +423,8 @@ fun MusicPlayerScreen() {
     if (showCreatePlaylistDialog) {
         AlertDialog(
             onDismissRequest = {
+                showCreatePlaylistDialog = false
+                playlistName = ""
             },
             confirmButton = {
                 Button(
@@ -434,6 +436,7 @@ fun MusicPlayerScreen() {
                                 )
                                 playlistName = ""
                                 loadPlaylists()
+                                showCreatePlaylistDialog = false
                             }
                         }
                     }
@@ -444,6 +447,8 @@ fun MusicPlayerScreen() {
             dismissButton = {
                 TextButton(
                     onClick = {
+                        showCreatePlaylistDialog = false
+                        playlistName = ""
                     }
                 ) {
                     Text("Cancel")
@@ -464,11 +469,15 @@ fun MusicPlayerScreen() {
     if (showAddToPlaylistDialog && songToAdd != null) {
         AlertDialog(
             onDismissRequest = {
+                showAddToPlaylistDialog = false
+                songToAdd = null
             },
             confirmButton = {},
             dismissButton = {
                 TextButton(
                     onClick = {
+                        showAddToPlaylistDialog = false
+                        songToAdd = null
                     }
                 ) {
                     Text("Close")
@@ -493,6 +502,7 @@ fun MusicPlayerScreen() {
                                                     songId = songToAdd!!.id
                                                 )
                                             )
+                                            showAddToPlaylistDialog = false
                                             songToAdd = null
                                         }
                                     }
@@ -704,7 +714,7 @@ fun MusicPlayerScreen() {
                     artist = currentSong.artist,
                     artwork = currentArtwork,
                     isPlaying = isPlaying,
-                    onOpen = { },
+                    onOpen = { showNowPlaying = true },
                     onPlayPause = {
                         if (player.isPlaying) {
                             player.pause()
@@ -1089,7 +1099,7 @@ fun MusicPlayerScreen() {
                                 .padding(16.dp)
                         ) {
                             Button(
-                                onClick = { }
+                                onClick = { showCreatePlaylistDialog = true }
                             ) {
                                 Text("Create Playlist")
                             }
@@ -1116,7 +1126,7 @@ fun MusicPlayerScreen() {
 
                                                         selectedPlaylistSongs = playlistSongs
                                                         openedPlaylistId = playlist.id
-                                                        playlist.name
+                                                        openedPlaylistName = playlist.name
 
                                                         val mediaItems = playlistSongs.map { it.toMediaItem(context) }
 
