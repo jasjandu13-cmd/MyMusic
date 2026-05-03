@@ -102,6 +102,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import coil.compose.AsyncImage
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -886,13 +887,8 @@ fun MusicPlayerScreen() {
                                     items = songs,
                                     key = { _, song -> song.id }
                                 ) { index, song ->
-                                    val songArt = remember(song.id) {
-                                        ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
-                                    }
-
                                     SongRow(
                                         song = song,
-                                        artwork = songArt,
                                         isFavorite = favoriteSongIds.contains(song.id),
                                         onClick = {
                                             player.shuffleModeEnabled = shuffleEnabled
@@ -1290,8 +1286,6 @@ fun MusicPlayerScreen() {
                                                     .clickable {
                                                         val originalIndex = songs.indexOfFirst { it.id == song.id }
                                                         if (originalIndex != -1) {
-                                                            player.setMediaItems(songs.map { it.toMediaItem(context) })
-                                                            player.prepare()
                                                             player.shuffleModeEnabled = shuffleEnabled
                                                             player.repeatMode = repeatMode
                                                             player.seekToDefaultPosition(originalIndex)
@@ -1300,36 +1294,21 @@ fun MusicPlayerScreen() {
                                                             applyReplayGainForCurrentSong()
                                                             currentArtwork = ArtworkRepository.loadEmbeddedArtwork(
                                                                 context,
-                                                                song.contentUri)
+                                                                song.contentUri
+                                                            )
                                                         }
                                                     }
                                                     .padding(vertical = 12.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                                             ) {
-                                                val songArt = remember(song.id) {
-                                                    ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
-                                                }
-
-                                                if (songArt != null) {
-                                                    Image(
-                                                        bitmap = songArt.asImageBitmap(),
-                                                        contentDescription = "Album art",
-                                                        modifier = Modifier
-                                                            .size(52.dp)
-                                                            .clip(RoundedCornerShape(10.dp)),
-                                                        contentScale = ContentScale.Crop
-                                                    )
-                                                } else {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(52.dp)
-                                                            .clip(RoundedCornerShape(10.dp))
-                                                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text("♪")
-                                                    }
-                                                }
+                                                AsyncImage(
+                                                    model = song.contentUri,
+                                                    contentDescription = "Album art",
+                                                    modifier = Modifier
+                                                        .size(52.dp)
+                                                        .clip(RoundedCornerShape(10.dp)),
+                                                    contentScale = ContentScale.Crop
+                                                )
 
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
