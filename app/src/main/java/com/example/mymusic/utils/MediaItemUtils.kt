@@ -17,20 +17,16 @@ private fun buildSongMediaItem(
     artist: String,
     album: String
 ): MediaItem {
-    val artworkBytes = ArtworkRepository.loadEmbeddedArtworkBytes(context, uri)
-
-    val metadataBuilder = MediaMetadata.Builder()
+    // Keep metadata lightweight – no embedded artwork here
+    val metadata = MediaMetadata.Builder()
         .setTitle(title)
         .setArtist(artist)
         .setAlbumTitle(album)
-
-    artworkBytes?.let {
-        metadataBuilder.setArtworkData(it, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
-    }
+        .build()
 
     return MediaItem.Builder()
         .setUri(uri)
-        .setMediaMetadata(metadataBuilder.build())
+        .setMediaMetadata(metadata)
         .build()
 }
 
