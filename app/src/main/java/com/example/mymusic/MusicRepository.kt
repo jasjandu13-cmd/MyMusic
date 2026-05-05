@@ -116,7 +116,23 @@ object MusicRepository {
             .ifBlank { "Unknown Folder" }
     }
 
-    fun cacheSongsInDatabase() {
-        // keep your existing implementation here
+    fun cacheSongsInDatabase(context: Context) {
+        val db = DatabaseProvider.getDatabase(context)
+
+        kotlinx.coroutines.runBlocking {
+            val storedSongs = getSongs(context).map { song ->
+                StoredSong(
+                    id = song.id,
+                    title = song.title,
+                    artist = song.artist,
+                    album = song.album,
+                    duration = song.duration,
+                    contentUri = song.contentUri.toString()
+                )
+            }
+
+            db.songDao().clearSongs()
+            db.songDao().insertSongs(storedSongs)
+        }
     }
 }
