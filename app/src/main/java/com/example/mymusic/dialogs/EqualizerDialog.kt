@@ -35,7 +35,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import java.util.Locale
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun EqualizerDialog(
@@ -183,7 +186,8 @@ fun EqualizerDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     for (index in 0 until eqBandCount) {
@@ -206,7 +210,7 @@ fun EqualizerDialog(
                             )
                             Text(
                                 text = String.format(
-                                    Locale.getDefault(),
+                                    LocalLocale.current.platformLocale,
                                     "%.2f dB",
                                     level / 100f
                                 ),
