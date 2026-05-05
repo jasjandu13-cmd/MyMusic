@@ -35,7 +35,7 @@ class MusicViewModel : ViewModel() {
     var openedPlaylistName by mutableStateOf("")
         private set
 
-    fun setSelectedTab(index: Int) {
+    fun selectTab(index: Int) {
         selectedTab = index
     }
 
