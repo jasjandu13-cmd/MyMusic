@@ -64,7 +64,6 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import com.example.mymusic.ArtworkRepository
 import com.example.mymusic.DatabaseProvider
 import com.example.mymusic.EqualizerManager
 import com.example.mymusic.FavoriteSongEntity
@@ -88,6 +87,7 @@ import com.example.mymusic.dialogs.NowPlayingDialog
 import com.example.mymusic.dialogs.QueueDialog
 import com.example.mymusic.dialogs.ReplayGainDialog
 import com.example.mymusic.dialogs.SleepTimerDialog
+import com.example.mymusic.ArtworkRepository
 import com.example.mymusic.getAudioPermission
 import com.example.mymusic.utils.albumKey
 import com.example.mymusic.utils.formatDuration
@@ -103,6 +103,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -250,7 +253,7 @@ fun MusicPlayerScreen() {
     }
 
     LaunchedEffect(player, isPlaying, isSeeking) {
-        while (true) {
+        while (isActive) {
             if (!isSeeking) {
                 currentPosition = if (player.currentPosition > 0) player.currentPosition else 0L
                 duration = if (player.duration > 0) player.duration else 0L
@@ -367,14 +370,21 @@ fun MusicPlayerScreen() {
 
     LaunchedEffect(hasPermission) {
         if (hasPermission) {
-            songs = MusicRepository.getSongs(context)
+            // 1) Heavy work off the main thread
+            val loadedSongs = withContext(Dispatchers.IO) {
+                MusicRepository.getSongs(context)
+            }
+
+            // 2) Back on main: update state and DB-backed stuff
+            songs = loadedSongs
+            // This is a no-op right now, but keep it for later
             MusicRepository.cacheSongsInDatabase()
             loadPlaylists()
             loadFavorites()
             loadReplayGain()
 
+            // 3) Set up the player queue
             val mediaItems = songs.map { it.toMediaItem(context) }
-
             player.setMediaItems(mediaItems)
             player.prepare()
             updateCurrentArtwork()
@@ -568,12 +578,16 @@ fun MusicPlayerScreen() {
             onSetMinutes = { minutes ->
                 sleepTimerRemainingMs = minutes * 60 * 1000L
                 sleepTimerActive = true
+                showSleepTimerDialog = false
             },
             onCancelTimer = {
                 sleepTimerActive = false
                 sleepTimerRemainingMs = 0L
+                showSleepTimerDialog = false
             },
-            onDismiss = {  }
+            onDismiss = {
+                showSleepTimerDialog = false
+            }
         )
     }
 
@@ -707,7 +721,7 @@ fun MusicPlayerScreen() {
                         if (openedPlaylistId != -1L) {
                             "Playlist: $openedPlaylistName"
                         } else {
-                            "Offline Music Player"
+                            "Dj Drake"
                         }
                     )
                 },
@@ -1224,7 +1238,14 @@ fun MusicPlayerScreen() {
                                                         player.prepare()
                                                         player.shuffleModeEnabled = shuffleEnabled
                                                         player.repeatMode = repeatMode
-                                                        setupAudioEffects()
+
+                                                        if (playlistSongs.isNotEmpty()) {
+                                                            player.seekToDefaultPosition(0)
+                                                            player.play()
+                                                            setupAudioEffects()
+                                                            applyReplayGainForCurrentSong()
+                                                            updateCurrentArtwork()
+                                                        }
                                                     }
                                                 }
                                         ) {
@@ -1390,30 +1411,14 @@ fun MusicPlayerScreen() {
                                                 .padding(vertical = 12.dp),
                                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
-                                            val songArt = remember(song.id) {
-                                                ArtworkRepository.loadEmbeddedArtwork(context, song.contentUri)
-                                            }
-
-                                            if (songArt != null) {
-                                                Image(
-                                                    bitmap = songArt.asImageBitmap(),
-                                                    contentDescription = "Album art",
-                                                    modifier = Modifier
-                                                        .size(52.dp)
-                                                        .clip(RoundedCornerShape(10.dp)),
-                                                    contentScale = ContentScale.Crop
-                                                )
-                                            } else {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(52.dp)
-                                                        .clip(RoundedCornerShape(10.dp))
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text("♪")
-                                                }
-                                            }
+                                            AsyncImage(
+                                                model = song.contentUri,
+                                                contentDescription = "Album art",
+                                                modifier = Modifier
+                                                    .size(52.dp)
+                                                    .clip(RoundedCornerShape(10.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
 
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
