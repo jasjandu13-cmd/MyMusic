@@ -106,6 +106,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.isActive
+import com.example.mymusic.AppSettings
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -155,8 +156,8 @@ fun MusicPlayerScreen() {
     val eqLevels = remember { mutableStateMapOf<Int, Float>() }
 
     var showBoostDialog by remember { mutableStateOf(false) }
-    var preampLevel by remember { mutableFloatStateOf(1.0f) }
-    var loudnessBoostMb by remember { mutableFloatStateOf(0f) }
+    var preampLevel by remember { mutableFloatStateOf(AppSettings.loadPreamp(context)) }
+    var loudnessBoostMb by remember { mutableFloatStateOf(AppSettings.loadBoost(context)) }
 
     var shuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
@@ -370,20 +371,17 @@ fun MusicPlayerScreen() {
 
     LaunchedEffect(hasPermission) {
         if (hasPermission) {
-            // 1) Heavy work off the main thread
             val loadedSongs = withContext(Dispatchers.IO) {
                 MusicRepository.getSongs(context)
             }
-
-            // 2) Back on main: update state and DB-backed stuff
             songs = loadedSongs
-            // This is a no-op right now, but keep it for later
-            MusicRepository.cacheSongsInDatabase()
+            withContext(Dispatchers.IO) {
+                MusicRepository.cacheSongsInDatabase(context)
+            }
             loadPlaylists()
             loadFavorites()
             loadReplayGain()
 
-            // 3) Set up the player queue
             val mediaItems = songs.map { it.toMediaItem(context) }
             player.setMediaItems(mediaItems)
             player.prepare()
@@ -539,11 +537,16 @@ fun MusicPlayerScreen() {
             eqMaxLevel = eqMaxLevel,
             eqLevels = eqLevels,
             getCenterFreq = { band -> equalizerManager.getCenterFreq(band) },
-            setBandLevel = { band, level -> equalizerManager.setBandLevel(band, level) },
+            setBandLevel = { band, level ->
+                equalizerManager.setBandLevel(band, level)
+                eqLevels[band.toInt()] = level.toFloat()
+                AppSettings.saveEqBandLevel(context, band.toInt(), level.toFloat())
+            },
             onReset = {
                 equalizerManager.resetAllBands()
                 for (i in 0 until eqBandCount) {
                     eqLevels[i] = 0f
+                    AppSettings.saveEqBandLevel(context, i, 0f)
                 }
             },
             onDismiss = { showEqualizerDialog = false }
